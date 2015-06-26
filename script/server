@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-
-var http      = require('http'),
-    tilelive  = require('tilelive'),
+var tilelive  = require('tilelive'),
     mbtiles   = require('mbtiles'),
     minimist  = require('minimist'),
     fs        = require('fs'),
