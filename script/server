@@ -27,12 +27,13 @@ tilelive.load(argv.mbtiles, function(err, source) {
   })
 
   function serve(req, res) {
-    if(req.url == '/favicon.ico') return
-    if(req.url.search(pattern) == -1)
-      return console.log('Invalid URL format: ' + req.url + ' Use /z/x/y.pbf')
-
-    var path = url.parse(req.url).path,
+    var uri = url.parse(req.url),
+        path = uri.path,
         parts = path.match(pattern)
+
+    if(req.url == '/favicon.ico') return
+    if(path.search(pattern) == -1)
+      return console.log('Invalid URL format: ' + req.url + ' Use /z/x/y.pbf')
 
     var z = parts[1],
         x = parts[2],
