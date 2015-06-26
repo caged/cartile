@@ -42,13 +42,14 @@ app.get('/tiles/:name/:z/:x/:y.pbf', function(req, res) {
   console.log('Loading: %s.  Tile z: %s, x: %s, y: %s', tileurl, z, x, y)
 
   tilelive.load(tileurl, function(err, source) {
+    if(err) return res.status(500).send("mbtiles file " + name + " doesn't exist")
+
     source.getTile(z, x, y, function(err, tile, headers) {
       if(err) return res.status(404).send(err.message + ' in ' + name)
       res.set(headers)
       return res.end(tile)
     })
   })
-
 })
 
 // Start the server on the given port
