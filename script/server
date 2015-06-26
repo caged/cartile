@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+
+var http      = require('http'),
+    tilelive  = require('tilelive'),
+    mbtiles   = require('mbtiles'),
+    minimist  = require('minimist')
+
+mbtiles.registerProtocols(tilelive)

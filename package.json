@@ -1,0 +1,8 @@
+{
+  "name": "cartile",
+  "dependencies": {
+    "tilelive": "~5.7.1",
+    "mbtiles": "~0.8.0",
+    "minimist": "~1.1.1"
+  }
+}
