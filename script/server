@@ -3,6 +3,29 @@
 var http      = require('http'),
     tilelive  = require('tilelive'),
     mbtiles   = require('mbtiles'),
-    minimist  = require('minimist')
+    minimist  = require('minimist'),
+    fs        = require('fs'),
+    path      = require('path'),
+    url       = require('url')
+
+var argv = minimist(process.argv.slice(2)),
+    port = argv.port || 4326
+
+if(!argv.mbtiles || argv.mbtiles.search(/^mbtiles:\/\//) == -1) {
+  return console.log("Usage: " + path.basename(__filename) + ' --mbtiles mbtiles://path/to/tiles')
+}
 
 mbtiles.registerProtocols(tilelive)
+
+tilelive.load(argv.mbtiles, function(err, source) {
+  if(err) return console.log(err)
+
+  var server = http.createServer(serve)
+  server.listen(port, function listen() {
+    console.log('Serving tiles on http://127.0.0.1:%s', port)
+  })
+})
+
+function serve(request, response) {
+  response.end('Served ' + request.url)
+}
