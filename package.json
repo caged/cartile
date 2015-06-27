@@ -5,5 +5,8 @@
     "mbtiles": "~0.8.0",
     "minimist": "~1.1.1",
     "express": "4.13.0"
+  },
+  "devDependencies": {
+    "pm2":  "0.14.2"
   }
 }
