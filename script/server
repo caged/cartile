@@ -1,56 +1,73 @@
 #!/usr/bin/env node
-
-var http      = require('http'),
-    tilelive  = require('tilelive'),
+var tilelive  = require('tilelive'),
     mbtiles   = require('mbtiles'),
     minimist  = require('minimist'),
     fs        = require('fs'),
     path      = require('path'),
-    url       = require('url')
+    express   = require('express')
 
-const argv    = minimist(process.argv.slice(2)),
-      port    = argv.port || 4326,
-      pattern = /^\/(\d+)\/(\d+)\/(\d+).pbf$/
+const argv     = minimist(process.argv.slice(2)),
+      tiledir  = argv.mbtiles,
+      styledir = argv.styles,
+      port     = argv.port || 4326,
+      pattern  = /^\/(\d+)\/(\d+)\/(\d+).pbf$/,
+      app      = express()
 
-if(!argv.mbtiles || argv.mbtiles.search(/^mbtiles:\/\//) == -1) {
-  return console.log("Usage: " + path.basename(__filename) + ' --mbtiles mbtiles://path/to/tiles')
-}
+// This script requires a tile directory and style directory
+if(!tiledir || !styledir)
+  return console.log('Usage: ' + path.basename(__filename) +
+    ' --mbtiles /path/to/mbtiles/parent/directory' +
+    ' --styles /path/to/styles/parent/directory' +
+    ' --port [optional port | 4326]')
 
 mbtiles.registerProtocols(tilelive)
 
-tilelive.load(argv.mbtiles, function(err, source) {
-  if(err) return console.log(err)
+// Add support for CORS
+app.use(cors)
 
-  var server = http.createServer(serve)
-  server.listen(port, function listen() {
-    console.log('Serving tiles on http://127.0.0.1:%s', port)
-  })
+// Serve files from style directory as static assets
+app.use('/styles', express.static(styledir))
 
-  function serve(req, res) {
-    var uri = url.parse(req.url),
-        path = uri.path,
-        parts = path.match(pattern)
+// Serve the requested tile from the requested mbtiles tileset
+app.get('/tiles/:name/:z/:x/:y.pbf', function(req, res) {
+  var params = req.params,
+      name    = params.name,
+      z       = params.z,
+      x       = params.x,
+      y       = params.y,
+      tileurl = 'mbtiles://' + path.resolve(path.join(tiledir, name + '.mbtiles'))
 
-    if(req.url == '/favicon.ico') return
-    if(path.search(pattern) == -1)
-      return console.log('Invalid URL format: ' + req.url + ' Use /z/x/y.pbf')
+  console.log('Loading: %s.  Tile z: %s, x: %s, y: %s', tileurl, z, x, y)
 
-    var z = parts[1],
-        x = parts[2],
-        y = parts[3]
-
-    console.log('Serving tile %d, %d, %d', z, x, y)
+  tilelive.load(tileurl, function(err, source) {
+    if(err) return res.status(500).send("mbtiles file " + name + " doesn't exist")
 
     source.getTile(z, x, y, function(err, tile, headers) {
-      if(err) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' })
-        return res.end(err.message)
-      } else {
-        headers['Access-Control-Allow-Origin'] = '*'
-        headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept'
-        res.writeHeader(200, headers)
-        res.end(tile)
-      }
+      if(err) return res.status(404).send(err.message + ' in ' + name)
+      res.set(headers)
+      return res.end(tile)
     })
-  }
+  })
 })
+
+// Start the server on the given port
+var server = app.listen(port, function() {
+  var addr = server.address(),
+      host = addr.address,
+      port = addr.port
+
+  console.log('Cartile at your service on //%s:%s', host, port)
+})
+
+// Support Cross-Origin Resource Sharing
+//
+// req - An express request
+// res - An express response
+// next - object for passing control to next handler
+//
+// Returns nothing
+function cors(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+  next()
+}
