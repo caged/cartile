@@ -28,6 +28,25 @@ app.use(cors)
 // Serve files from style directory as static assets
 app.use('/styles', express.static(styledir))
 
+// Naively generate a [TileJSON](https://github.com/mapbox/tilejson-spec/tree/master/2.1.0#2-file-format)
+// url from the given style and source.  MapBox can use these URLs to composite
+// custom layers over MapBox base layers
+app.get('/tilejson/:style/:source.json', function(req, res) {
+  var style = req.params.style,
+      source = req.params.source,
+      json, out
+
+  try {
+    json = JSON.parse(fs.readFileSync(path.resolve(path.join(styledir, style + '.json'))))
+    out  = json.sources[source]
+    out.tilejson = '2.1.0'
+    out.name = source
+    return res.json(out)
+  } catch (e) {
+    return res.status(500).end(e.message)
+  }
+})
+
 // Serve the requested tile from the requested mbtiles tileset
 app.get('/tiles/:name/:z/:x/:y.pbf', function(req, res) {
   var params = req.params,
